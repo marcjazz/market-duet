@@ -68,18 +68,6 @@ impl PnlTracker {
         realized
     }
 
-    pub fn get_unrealized_pnl(&self, outcome: Outcome, current_price: f64) -> f64 {
-        if let Some(position) = self.positions.get(&outcome) {
-            if position.quantity == 0.0 {
-                0.0
-            } else {
-                (current_price - position.avg_entry_price) * position.quantity
-            }
-        } else {
-            0.0
-        }
-    }
-
     pub fn get_total_unrealized_pnl(&self, prices: &HashMap<Outcome, f64>) -> f64 {
         let mut total = 0.0;
         for (outcome, position) in &self.positions {

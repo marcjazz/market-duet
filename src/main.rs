@@ -3,7 +3,7 @@ mod strategy;
 mod risk;
 mod pnl;
 
-use market::Exchange;
+use market::{Exchange, Side};
 use risk::{RiskEngine, RiskLimits};
 use pnl::PnlTracker;
 use strategy::{FEE, SLIPPAGE, Outcome};
@@ -56,12 +56,27 @@ fn main() {
                 // 4. Execute trade
                 total_trades += 1;
 
+                // 4. Execute trade
+                // Market impact: fill orders in the books
+                let (buy_exchange, sell_exchange) = if signal.buy_exchange == exchange_a.name {
+                    (&mut exchange_a, &mut exchange_b)
+                } else {
+                    (&mut exchange_b, &mut exchange_a)
+                };
+
+                let buy_fills = buy_exchange.fill_order(Side::Buy, signal.quantity);
+                let sell_fills = sell_exchange.fill_order(Side::Sell, signal.quantity);
+
+                // Calculate actual average prices from fills
+                let actual_buy_price = buy_fills.iter().map(|(p, q)| p * q).sum::<f64>() / signal.quantity;
+                let actual_sell_price = sell_fills.iter().map(|(p, q)| p * q).sum::<f64>() / signal.quantity;
+
                 // Buy leg
-                let buy_price_with_slippage = signal.avg_buy_price * (1.0 + SLIPPAGE);
+                let buy_price_with_slippage = actual_buy_price * (1.0 + SLIPPAGE);
                 let buy_fee = buy_price_with_slippage * FEE;
                 
                 // Sell leg
-                let sell_price_with_slippage = signal.avg_sell_price * (1.0 - SLIPPAGE);
+                let sell_price_with_slippage = actual_sell_price * (1.0 - SLIPPAGE);
                 let sell_fee = sell_price_with_slippage * FEE;
 
                 // Process trades in PnL tracker
@@ -82,9 +97,10 @@ fn main() {
                 // Log trade
                 println!("[TRADE] #{}", total_trades);
                 println!("Outcome: {:?}", signal.outcome);
-                println!("Buy {} @ {:.2} | Sell {} @ {:.2}", 
-                    signal.buy_exchange, signal.avg_buy_price, 
-                    signal.sell_exchange, signal.avg_sell_price);
+                println!("Buy {} @ {:.2} | Sell {} @ {:.2}",
+                    signal.buy_exchange, actual_buy_price,
+                    signal.sell_exchange, actual_sell_price);
+                println!("Signal Net Profit: {:.4}", signal.net_profit);
                 println!("Realized PnL: {:.4} | Total PnL: {:.4}", realized_pnl, pnl_tracker.realized_pnl);
                 println!("-----------------------------------");
             }

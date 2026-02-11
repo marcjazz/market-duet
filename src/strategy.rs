@@ -15,8 +15,6 @@ pub struct TradeSignal {
     pub sell_exchange: String,
     pub outcome: Outcome,
     pub quantity: f64,
-    pub avg_buy_price: f64,
-    pub avg_sell_price: f64,
     pub net_profit: f64,
 }
 
@@ -71,8 +69,6 @@ fn check_arb(
             sell_exchange: sell_name.to_string(),
             outcome,
             quantity,
-            avg_buy_price,
-            avg_sell_price,
             net_profit,
         })
     } else {
